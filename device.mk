@@ -11,8 +11,10 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit_only.mk)
 $(call inherit-product, frameworks/native/build/tablet-7in-xhdpi-2048-dalvik-heap.mk)
 $(call inherit-product, vendor/opi/opi3b/opi3b-vendor.mk)
 
+
 # APEX
 $(call inherit-product, $(SRC_TARGET_DIR)/product/updatable_apex.mk)
+WITH_DEXPREOPT := true
 
 # API level
 PRODUCT_SHIPPING_API_LEVEL := 36
@@ -59,20 +61,46 @@ PRODUCT_COPY_FILES += \
 #     external/alsa-lib/src/conf/pcm/surround71.conf:$(TARGET_COPY_OUT_VENDOR)/etc/alsa/pcm/surround71.conf \
 #     external/alsa-lib/src/conf/smixer.conf:$(TARGET_COPY_OUT_VENDOR)/etc/alsa/smixer.conf
 
-# # Bluetooth
+# Bluetooth
+PRODUCT_PROPERTY_OVERRIDES += \
+    persist.bluetooth.a2dp_offload.disabled=true \
+    debug.sf.disable_hwc=1 \
+    bluetooth.hfp.msbc_config.enabled=false \
+    persist.bluetooth.wbs_config.enabled=false \
+    ro.bluetooth.a2dp_offload.supported=false \
+    persist.bluetooth.leaudio.allow_list=false \
+    bluetooth.core.le.apcf_disabled=true
+
 PRODUCT_PACKAGES += \
-    com.android.hardware.bluetooth.opi3b
-#     # # Bluetooth
-# PRODUCT_PACKAGES += \
-#     android.hardware.bluetooth-service.opi
+    android.hardware.bluetooth-service.opi \
+    android.hardware.bluetooth.ranging-service.default \
+    android.hardware.bluetooth-service.opi.rc \
+    android.hardware.bluetooth-service.opi.xml \
+    libbt-vendor-sprd \
+    libbt-sprd_suite \
+    libbt-vendor \
+    hciattach \
+    hciattach_opi \
+    hciconfig_opi \
+    hcitool_opi
 
 PRODUCT_COPY_FILES += \
+    packages/modules/Bluetooth/system/conf/bt_stack.conf:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth/bt_stack.conf \
+    packages/modules/Bluetooth/system/conf/interop_database.conf:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth/interop_database.conf \
+    packages/modules/Bluetooth/system/conf/bt_did.conf:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth/bt_did.conf \
     frameworks/native/data/etc/android.hardware.bluetooth.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.bluetooth.xml \
-    frameworks/native/data/etc/android.hardware.bluetooth_le.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.bluetooth_le.xml
+    frameworks/native/data/etc/android.hardware.bluetooth_le.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.bluetooth_le.xml \
+    frameworks/native/data/etc/android.hardware.bluetooth_le.channel_sounding.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.bluetooth_le.channel_sounding.xml \
+    vendor/opi/opi3b/proprietary/vendor/etc/bluetooth/bt_vendor.conf:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth/bt_vendor.conf \
+    vendor/opi/opi3b/proprietary/vendor/lib64/libbt-sprd_suite.so:$(TARGET_COPY_OUT_VENDOR)/lib/libbt-sprd_suite.so \
+    vendor/opi/opi3b/proprietary/vendor/lib64/libbt-vendor-sprd.so:$(TARGET_COPY_OUT_VENDOR)/lib/libbt-vendor-sprd.so \
+    vendor/opi/opi3b/proprietary/vendor/lib64/libbt-vendor.so:$(TARGET_COPY_OUT_VENDOR)/lib/libbt-vendor.so
 
+# Bluetooth Audio
 PRODUCT_PACKAGES += \
     android.hardware.bluetooth.audio-impl \
-    audio.bluetooth.default
+    audio.bluetooth.default \
+    android.hardware.bluetooth.socket-service.default
 
 PRODUCT_COPY_FILES += \
     frameworks/av/services/audiopolicy/config/a2dp_in_audio_policy_configuration_7_0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_in_audio_policy_configuration_7_0.xml \
@@ -132,8 +160,6 @@ PRODUCT_PACKAGES += \
     # com.android.hardware.tv.hdmi.cec.opi3b \
 
 
-    
-
 # PRODUCT_COPY_FILES += \
 #     frameworks/native/data/etc/android.hardware.hdmi.cec.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.hdmi.cec.xml
 
@@ -165,7 +191,8 @@ PRODUCT_COPY_FILES += \
 
 # Gatekeeper
 PRODUCT_PACKAGES += \
-    com.android.hardware.gatekeeper.nonsecure
+    com.android.hardware.gatekeeper.nonsecure \
+    gatekeeperd
 
 # Graphics
 PRODUCT_PACKAGES += \
@@ -187,6 +214,11 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     dri_gbm \
     libgbm_mesa
+# Mesa graphics driver symlinks
+PRODUCT_PACKAGES += \
+    panfrost_dri_symlink64 \
+    rockchip_dri_symlink64 \
+    kms_swrast_dri_symlink64
 
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.software.opengles.deqp.level-2024-03-01.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.opengles.deqp.level.xml
@@ -245,7 +277,17 @@ PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/ramdisk/fstab.opi3b:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.opi3b \
     $(DEVICE_PATH)/ramdisk/init.opi3b.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.opi3b.rc \
     $(DEVICE_PATH)/ramdisk/init.opi3b.usb.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.opi3b.usb.rc \
-    $(DEVICE_PATH)/ramdisk/ueventd.opi3b.rc:$(TARGET_COPY_OUT_VENDOR)/etc/ueventd.rc
+    $(DEVICE_PATH)/ramdisk/ueventd.opi3b.rc:$(TARGET_COPY_OUT_VENDOR)/ueventd.rc
+
+# UWE5622 firmware must exist at absolute /lib/firmware for sprdwl_ng.
+# Put it in boot ramdisk to avoid runtime init-script dependency.
+# But bt config key files must be in vendor/lib/firmware
+PRODUCT_COPY_FILES += \
+    vendor/opi/opi3b/proprietary/vendor/etc/firmware/wifi_2355b001_1ant.ini:$(TARGET_COPY_OUT_RAMDISK)/lib/firmware/wifi_2355b001_1ant.ini \
+    vendor/opi/opi3b/proprietary/vendor/etc/firmware/bt_configure_pskey.ini:$(TARGET_COPY_OUT_VENDOR)/lib/firmware/bt_configure_pskey.ini \
+    vendor/opi/opi3b/proprietary/vendor/etc/firmware/bt_configure_rf_marlin3e_2.ini:$(TARGET_COPY_OUT_RAMDISK)/lib/firmware/bt_configure_rf_marlin3e_2.ini \
+    vendor/opi/opi3b/proprietary/vendor/etc/firmware/bt_configure_rf_marlin3e_3.ini:$(TARGET_COPY_OUT_RAMDISK)/lib/firmware/bt_configure_rf_marlin3e_3.ini \
+    vendor/opi/opi3b/proprietary/vendor/etc/firmware/wcnmodem.bin:$(TARGET_COPY_OUT_RAMDISK)/lib/firmware/uwe5622/wcnmodem.bin
 
 # Seccomp
 PRODUCT_COPY_FILES += \
@@ -282,33 +324,71 @@ PRODUCT_COPY_FILES += \
 $(call inherit-product, packages/modules/Virtualization/apex/product_packages.mk)
 
 # Wifi
-# PRODUCT_PACKAGES += \
-#     android.hardware.wifi-service \
-#     com.android.hardware.wifi.hostapd.opi3b \
-#     com.android.hardware.wifi.supplicant.opi3b \
-#     libwpa_client \
-#     wificond
-#com.android.hardware.wifi \
-
-
-
-# Wifi
-
 PRODUCT_PACKAGES += \
-    android.hardware.wifi-service \
-    hostapd \
-    hostapd_cli \
+    android.hardware.wifi@1.0-service \
+    wpa_supplicant \
+    wpa_supplicant.rc \
+    wpa_supplicant.conf \
     libwpa_client \
     wificond \
-    wpa_cli \
-    wpa_supplicant \
-    wpa_supplicant.conf
+    libwifi-hal \
+    libwifi-hal-unisoc \
+    libnetutils \
+    libnl.vendor \
+    libwifi-system-iface.vendor \
+    android.hardware.wifi@1.0.vendor \
+    android.hardware.wifi@1.1.vendor \
+    android.hardware.wifi@1.2.vendor \
+    android.hardware.wifi@1.3.vendor \
+    android.hardware.wifi@1.4.vendor \
+    android.hardware.wifi.hostapd@1.0.vendor \
+    android.hardware.wifi.hostapd@1.1.vendor \
+    android.hardware.wifi.hostapd@1.2.vendor \
+    android.hardware.wifi.hostapd@1.3.vendor \
+    android.hardware.wifi.supplicant@1.0.vendor \
+    android.hardware.wifi.supplicant@1.1.vendor \
+    android.hardware.wifi.supplicant@1.2.vendor \
+    android.hardware.wifi.supplicant@1.3.vendor \
+    android.hardware.wifi.supplicant@1.4.vendor
 
-PRODUCT_COPY_FILES += \
-    hardware/broadcom/wlan/bcmdhd/config/wpa_supplicant_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/wpa_supplicant_overlay.conf
+# Wifi (use vendor legacy HIDL wifi HAL service/binaries from stock image)
+# PRODUCT_PACKAGES += \
+#     libnl.vendor \
+#     wificond \
+#     libwifi-hal \
+#     libwifi-system-iface.vendor \
+#     android.hardware.wifi@1.0.vendor \
+#     android.hardware.wifi@1.1.vendor \
+#     android.hardware.wifi@1.2.vendor \
+#     android.hardware.wifi@1.3.vendor \
+#     android.hardware.wifi@1.4.vendor \
+#     android.hardware.wifi@1.5.vendor \
+#     android.hardware.wifi@1.6.vendor \
+#     android.hardware.wifi.hostapd@1.0.vendor \
+#     android.hardware.wifi.hostapd@1.1.vendor \
+#     android.hardware.wifi.hostapd@1.2.vendor \
+#     android.hardware.wifi.hostapd@1.3.vendor \
+#     android.hardware.wifi.supplicant@1.0.vendor \
+#     android.hardware.wifi.supplicant@1.1.vendor \
+#     android.hardware.wifi.supplicant@1.2.vendor \
+#     android.hardware.wifi.supplicant@1.3.vendor \
+#     android.hardware.wifi.supplicant@1.4.vendor
+
 
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.wifi.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.wifi.xml
+
+# AP6256 (BCM43456) Wi-Fi + BT firmware blobs.
+PRODUCT_COPY_FILES += \
+    vendor/opi/opi3b/proprietary/vendor/firmware/brcm/brcmfmac43456-sdio.bin:$(TARGET_COPY_OUT_VENDOR)/firmware/brcm/brcmfmac43456-sdio.bin \
+    vendor/opi/opi3b/proprietary/vendor/firmware/brcm/brcmfmac43456-sdio.clm_blob:$(TARGET_COPY_OUT_VENDOR)/firmware/brcm/brcmfmac43456-sdio.clm_blob \
+    vendor/opi/opi3b/proprietary/vendor/firmware/brcm/brcmfmac43456-sdio.txt:$(TARGET_COPY_OUT_VENDOR)/firmware/brcm/brcmfmac43456-sdio.txt \
+    vendor/opi/opi3b/proprietary/vendor/firmware/brcm/brcmfmac43456-sdio.AP6256.txt:$(TARGET_COPY_OUT_VENDOR)/firmware/brcm/brcmfmac43456-sdio.AP6256.txt \
+    vendor/opi/opi3b/proprietary/vendor/firmware/brcm/BCM4345C5.hcd:$(TARGET_COPY_OUT_VENDOR)/firmware/brcm/BCM4345C5.hcd \
+    vendor/opi/opi3b/proprietary/vendor/firmware/regulatory.db:$(TARGET_COPY_OUT_VENDOR)/firmware/regulatory.db \
+    vendor/opi/opi3b/proprietary/vendor/firmware/regulatory.db.p7s:$(TARGET_COPY_OUT_VENDOR)/firmware/regulatory.db.p7s
+
+# CDTECH/Unisoc UWE5622 Wi-Fi + BT blobs are provided from vendor/opi/opi3b.
 
 # Window extensions
 $(call inherit-product, $(SRC_TARGET_DIR)/product/window_extensions.mk)

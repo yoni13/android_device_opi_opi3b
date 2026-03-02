@@ -5,30 +5,47 @@
 prebuilt_etc {
     name: "android.hardware.wifi.hostapd-service.rc",
     src: "android.hardware.wifi.hostapd-service.rc",
-    installable: false,
+    vendor: true,
+    sub_dir: "init",
 }
 
 prebuilt_etc {
     name: "android.hardware.wifi.supplicant-service.rc",
     src: "android.hardware.wifi.supplicant-service.rc",
-    installable: false,
+    vendor: true,
+    sub_dir: "init",
 }
 
 prebuilt_etc {
-    name: "wpa_supplicant.conf.opi",
-    src: ":wpa_supplicant_template.conf",
-    filename: "wpa_supplicant.conf",
+    name: "wpa_supplicant.conf",
+    src: "wpa_supplicant.conf",
     relative_install_path: "wifi",
-    installable: false,
+    vendor: true,
 }
 
 prebuilt_etc {
     name: "wpa_supplicant_overlay.conf",
     src: "wpa_supplicant_overlay.conf",
     relative_install_path: "wifi",
-    installable: false,
+    vendor: true,
 }
 
+prebuilt_etc {
+    name: "wpa_supplicant.rc",
+    src: "wpa_supplicant.rc",
+    filename: "wpa_supplicant.rc",
+    sub_dir: "init",
+    vendor: true,
+}
+
+prebuilt_etc {
+    name: "opi_wifi_hal.xml",
+    src: "vendor_hals/opi_wifi_hal.xml",
+    sub_dir: "wifi/vendor_hals",
+    vendor: true,
+}
+
+// Keep APEX definitions for compatibility if needed elsewhere
 apex {
     name: "com.android.hardware.wifi.hostapd.opi3b",
     manifest: "apex_manifest_hostapd.json",
@@ -62,7 +79,7 @@ apex {
     prebuilts: [
         "android.hardware.wifi.supplicant-service.rc",
         "android.hardware.wifi.supplicant.xml.prebuilt",
-        "wpa_supplicant.conf.opi",
+        "wpa_supplicant.conf",
         "wpa_supplicant_overlay.conf",
     ],
 }

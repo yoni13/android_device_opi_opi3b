@@ -1,0 +1,5 @@
+# Allow the Bluetooth HAL to access the Unisoc UART device
+allow hal_bluetooth_default hci_tty_device:chr_file rw_file_perms;
+allow hal_bluetooth_default vendor_file:file rx_file_perms;
+allow hal_bluetooth_default shell_exec:file rx_file_perms;
+allow hal_bluetooth_default toolbox_exec:file rx_file_perms;

@@ -1,3 +1,6 @@
+# Bluetooth
+android.hardware.bluetooth.IBluetoothHci/default                u:object_r:hal_bluetooth_service:s0
+
 # DRM
 android.hardware.drm.IDrmFactory/widevine  u:object_r:hal_drm_service:s0
 

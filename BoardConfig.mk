@@ -25,27 +25,29 @@ TARGET_NO_BOOTLOADER := true
 # BOARD_LIBCAMERA_USES_MESON_BUILD := true
 
 # Display
-TARGET_SCREEN_DENSITY := 240
-
+TARGET_SCREEN_DENSITY := 213
+# Metadata
+BOARD_USES_METADATA_PARTITION := true
+BOARD_METADATAIMAGE_PARTITION_SIZE := 16777216  # 16MB is standard
+BOARD_METADATAIMAGE_FILE_SYSTEM_TYPE := ext4
 
 # !------- TODO: need to change to panfrost
-
-# # Graphics
-# BOARD_MESA3D_BUILD_LIBGBM := true
-# BOARD_MESA3D_USES_MESON_BUILD := true
-# BOARD_MESA3D_GALLIUM_DRIVERS := vc4 v3d
-# BOARD_MESA3D_VULKAN_DRIVERS := broadcom
 # Graphics
 BOARD_MESA3D_BUILD_LIBGBM := true
 BOARD_MESA3D_USES_MESON_BUILD := true
-BOARD_MESA3D_GALLIUM_DRIVERS := panfrost
+BOARD_MESA3D_GALLIUM_DRIVERS := panfrost,kmsro
 BOARD_MESA3D_VULKAN_DRIVERS := panfrost
 
 # Kernel
 BOARD_CUSTOM_BOOTIMG := true
 BOARD_CUSTOM_BOOTIMG_MK := $(DEVICE_PATH)/mkbootimg.mk
-#BOARD_KERNEL_CMDLINE := console=ttyAMA10,115200 no_console_suspend root=/dev/ram0 rootwait androidboot.hardware=rpi5
-BOARD_KERNEL_CMDLINE := console=ttyS2,1500000 no_console_suspend root=/dev/ram0 rootwait androidboot.hardware=opi3b
+TARGET_NO_KERNEL_OVERRIDE := true
+
+# Use prebuilt kernel image packaged in device tree
+BOARD_KERNEL_IMAGE_NAME := Image
+TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)-kernel/$(BOARD_KERNEL_IMAGE_NAME)
+BOARD_KERNEL_CMDLINE := console=ttyS2,1500000 no_console_suspend root=/dev/ram0 rootwait androidboot.hardware=opi3b video=HDMI-A-1:1920x1080@60
+BOARD_KERNEL_CMDLINE += androidboot.console=ttyFIQ0
 
 # Manifest
 DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE := $(DEVICE_PATH)/framework_compatibility_matrix.xml
@@ -57,7 +59,7 @@ PRODUCT_MANIFEST_FILES := $(DEVICE_PATH)/product_manifest.xml
 BOARD_FLASH_BLOCK_SIZE := 4096
 BOARD_BOOTIMAGE_PARTITION_SIZE := 134217728 # 128M
 BOARD_SYSTEMIMAGE_PARTITION_SIZE := 2684354560 # 2560M
-BOARD_USERDATAIMAGE_PARTITION_SIZE := 134217728 # 128M
+BOARD_USERDATAIMAGE_PARTITION_SIZE := 4294967296 # 4G
 BOARD_VENDORIMAGE_PARTITION_SIZE := 268435456 # 256M
 BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE := ext4
 TARGET_USERIMAGES_SPARSE_EXT_DISABLED := true
@@ -66,7 +68,6 @@ TARGET_USERIMAGES_USE_EXT4 := true
 
 # !-----TODO : need to check dependencies
 # Platform
-#TARGET_BOARD_PLATFORM := bcm2712
 TARGET_BOARD_PLATFORM := Rockchip
 
 TARGET_BOOTLOADER_BOARD_NAME := Rockchip
@@ -80,6 +81,7 @@ TARGET_NO_RECOVERY := true
 # SELinux
 BOARD_SEPOLICY_DIRS += device/opi/opi3b/sepolicy
 BOARD_KERNEL_CMDLINE += androidboot.selinux=permissive
+SELINUX_IGNORE_NEVERALLOWS := true
 
 # Treble
 TARGET_COPY_OUT_VENDOR := vendor
@@ -87,20 +89,23 @@ TARGET_COPY_OUT_VENDOR := vendor
 # Virtualization
 BOARD_KERNEL_CMDLINE += androidboot.hypervisor.vm.supported=1
 
-# # Wifi
-# BOARD_WLAN_DEVICE := bcmdhd
-# BOARD_HOSTAPD_DRIVER := NL80211
-# BOARD_HOSTAPD_PRIVATE_LIB := lib_driver_cmd_$(BOARD_WLAN_DEVICE)
-# BOARD_WPA_SUPPLICANT_DRIVER := NL80211
-# BOARD_WPA_SUPPLICANT_PRIVATE_LIB := lib_driver_cmd_$(BOARD_WLAN_DEVICE)
-# WPA_SUPPLICANT_VERSION := VER_0_8_X
-# BOARD_KERNEL_CMDLINE += androidboot.wificountrycode=00
 
 # Wifi
-BOARD_WLAN_DEVICE := bcmdhd
+BOARD_WLAN_DEVICE := unisoc
 BOARD_HOSTAPD_DRIVER := NL80211
-BOARD_HOSTAPD_PRIVATE_LIB := lib_driver_cmd_$(BOARD_WLAN_DEVICE)
 BOARD_WPA_SUPPLICANT_DRIVER := NL80211
-BOARD_WPA_SUPPLICANT_PRIVATE_LIB := lib_driver_cmd_$(BOARD_WLAN_DEVICE)
-WIFI_HIDL_UNIFIED_SUPPLICANT_SERVICE_RC_ENTRY := true
 WPA_SUPPLICANT_VERSION := VER_0_8_X
+BOARD_WIFI_VENDOR_HAL := libwifi-hal-uni
+
+# Disable features that crash the Unisoc VIF allocation
+WIFI_HIDL_FEATURE_DISABLE_AP_MAC_RANDOMIZATION := true
+WIFI_HIDL_FEATURE_AWARE := false
+WIFI_HIDL_FEATURE_DUAL_INTERFACE := false
+
+# Unisoc specific
+WIFI_DRIVER_MODULE_NAME := "sprdwl_ng"
+WIFI_DRIVER_MODULE_PATH := "/vendor/lib/modules/sprdwl_ng.ko"
+WIFI_DRIVER_FW_PATH_PARAM := "/sys/module/sprdwl_ng/parameters/firmware_path"
+
+# Temporary for Wi-Fi bring-up: allow shipping .ko via PRODUCT_COPY_FILES.
+BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true

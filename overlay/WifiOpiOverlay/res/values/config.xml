@@ -36,4 +36,9 @@
     <!-- Do not translate. Default access point SSID used for tethering -->
     <string name="wifi_tether_configure_ssid_default" translatable="false">Orange Pi 3b</string>
 
+    <!-- Bluetooth -->
+    <bool name="config_bluetooth_le_peripheral_mode_supported">true</bool>
+    <bool name="config_bluetooth_hfp_client_wbs_for_host">false</bool>
+    <bool name="config_bluetooth_sco_offload">false</bool>
+
 </resources>

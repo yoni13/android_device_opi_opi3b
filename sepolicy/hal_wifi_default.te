@@ -1,0 +1,2 @@
+allow hal_wifi_default vendor_wifi_etc_file:dir r_dir_perms;
+allow hal_wifi_default vendor_wifi_etc_file:file r_file_perms;

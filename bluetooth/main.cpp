@@ -24,7 +24,7 @@
 using ::aidl::android::hardware::bluetooth::impl::BluetoothHci;
 
 int main() {
-    ABinderProcess_setThreadPoolMaxThreadCount(0);
+    ABinderProcess_setThreadPoolMaxThreadCount(1);
     std::shared_ptr<BluetoothHci> bluetooth = ndk::SharedRefBase::make<BluetoothHci>();
 
     const std::string instance = std::string() + BluetoothHci::descriptor + "/default";

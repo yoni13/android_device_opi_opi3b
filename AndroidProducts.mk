@@ -5,11 +5,9 @@
 #
 
 PRODUCT_MAKEFILES := \
-    $(LOCAL_DIR)/aosp_opi3b.mk \
-    $(LOCAL_DIR)/aosp_opi3b_car.mk \
-    $(LOCAL_DIR)/aosp_opi3b_tv.mk
+    $(LOCAL_DIR)/lineage_opi3b_tv.mk
 
 COMMON_LUNCH_CHOICES := \
-    aosp_opi3b-trunk_staging-userdebug \
-    aosp_opi3b_car-trunk_staging-userdebug \
-    aosp_opi3b_tv-trunk_staging-userdebug
+    lineage_opi3b_tv-userdebug \
+    lineage_opi3b_tv-user \
+    lineage_opi3b_tv-eng # PLS dont use, we rely on WITH_DEXPREOPT to boot!

@@ -33,9 +33,7 @@ class NetBluetoothMgmt {
 
  private:
   int waitHciDev(int hci_interface);
-  int findRfKill();
   int rfKill(int block);
-  char *rfkill_state_;
 
   // File descriptor opened to the bluetooth user channel.
   int bt_fd_{-1};

@@ -23,6 +23,8 @@
 #include <log/log.h>
 #include <poll.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
 #include <unistd.h>
 
 #include <cerrno>
@@ -95,7 +97,8 @@ int NetBluetoothMgmt::waitHciDev(int hci_interface) {
 
   if (bind(fd, (struct sockaddr*)&hci_addr, sizeof(hci_addr)) < 0) {
     ALOGE("unable to bind bluetooth control channel: %s", strerror(errno));
-    goto end;
+    ::close(fd);
+    return -1;
   }
 
   // Send the control command [Read Index List].
@@ -107,16 +110,20 @@ int NetBluetoothMgmt::waitHciDev(int hci_interface) {
 
   if (write(fd, &cmd, 6) != 6) {
     ALOGE("error writing mgmt command: %s", strerror(errno));
-    goto end;
+    ::close(fd);
+    return -1;
   }
 
   // Poll the control socket waiting for the command response,
-  // and subsequent [Index Added] events. The loops continue without
-  // timeout until the selected hci interface is detected.
+  // and subsequent [Index Added] events. The loops continue
+  // for at most 30 seconds until the selected hci interface is detected.
   pollfd = {.fd = fd, .events = POLLIN};
 
-  for (;;) {
-    ret = poll(&pollfd, 1, -1);
+  int timeout_ms = 30000; // 30s timeout
+  int wait_ms = 1000;    // check every 1s
+
+  while (timeout_ms > 0) {
+    ret = poll(&pollfd, 1, wait_ms);
 
     // Poll interrupted, try again.
     if (ret == -1 && (errno == EINTR || errno == EAGAIN)) {
@@ -129,8 +136,14 @@ int NetBluetoothMgmt::waitHciDev(int hci_interface) {
       break;
     }
 
+    // Poll timeout, check elapsed time.
+    if (ret == 0) {
+        timeout_ms -= wait_ms;
+        continue;
+    }
+
     // Spurious wakeup, try again.
-    if (ret == 0 || (pollfd.revents & POLLIN) == 0) {
+    if ((pollfd.revents & POLLIN) == 0) {
       continue;
     }
 
@@ -139,7 +152,7 @@ int NetBluetoothMgmt::waitHciDev(int hci_interface) {
     ret = read(fd, &ev, sizeof(ev));
     if (ret < 0) {
       ALOGE("error reading mgmt event: %s", strerror(errno));
-      goto end;
+      break;
     }
 
     // Received [Read Index List] command response.
@@ -174,63 +187,53 @@ int NetBluetoothMgmt::waitHciDev(int hci_interface) {
     }
   }
 
+  ALOGE("timeout waiting for hci interface %d", hci_interface);
+  ret = -1;
+
 end:
   ::close(fd);
   return ret;
 }
 
-int NetBluetoothMgmt::findRfKill() {
-    char rfkill_type[64];
-    char type[16];
-    int fd, size, i;
-    for(i = 0; rfkill_state_ == NULL; i++)
-    {
-        snprintf(rfkill_type, sizeof(rfkill_type), "/sys/class/rfkill/rfkill%d/type", i);
-        if ((fd = open(rfkill_type, O_RDONLY)) < 0)
-        {
-            ALOGE("open(%s) failed: %s (%d)\n", rfkill_type, strerror(errno), errno);
-            return -1;
-        }
-
-        size = read(fd, &type, sizeof(type));
-        ::close(fd);
-
-        if ((size >= 9) && !memcmp(type, "bluetooth", 9))
-        {
-            ::asprintf(&rfkill_state_, "/sys/class/rfkill/rfkill%d/state", i);
-            break;
-        }
-    }
-    return 0;
-}
-
 int NetBluetoothMgmt::rfKill(int block) {
-  int fd;
-  char on = (block)?'1':'0';
-  if (findRfKill() != 0) return 0;
+  char rfkill_type[64];
+  char rfkill_state[64];
+  char type[16];
+  int fd, size, i;
+  char on = (block) ? '0' : '1';
 
-  fd = open(rfkill_state_, O_WRONLY);
-  if (fd < 0) {
-    ALOGE( "Unable to open /dev/rfkill");
-    return -1;
-  }
-  ssize_t len;
-  WRITE_NO_INTR(len = write(fd, &on, 1));
-  if (len < 0) {
-    ALOGE( "Failed to change rfkill state");
+  for (i = 0; i < 16; i++) {
+    snprintf(rfkill_type, sizeof(rfkill_type), "/sys/class/rfkill/rfkill%d/type", i);
+    fd = open(rfkill_type, O_RDONLY);
+    if (fd < 0) continue;
+
+    memset(type, 0, sizeof(type));
+    size = read(fd, &type, sizeof(type) - 1);
     ::close(fd);
-    return -1;
+
+    if (size > 0) {
+      ALOGI("Found rfkill%d type: %s", i, type);
+      if (strstr(type, "bluetooth")) {
+        snprintf(rfkill_state, sizeof(rfkill_state), "/sys/class/rfkill/rfkill%d/state", i);
+        fd = open(rfkill_state, O_WRONLY);
+        if (fd >= 0) {
+          ALOGI("Unblocking bluetooth rfkill%d (%c)", i, on);
+          WRITE_NO_INTR(write(fd, &on, 1));
+          ::close(fd);
+        } else {
+          ALOGW("Skipping rfkill%d unblock: %s", i, strerror(errno));
+        }
+      }
+    }
   }
-  ::close(fd);
   return 0;
 }
 
 int NetBluetoothMgmt::openHci(int hci_interface) {
   ALOGI("opening hci interface %d", hci_interface);
 
-  // Block Bluetooth.
-  rfkill_state_ = NULL;
-  rfKill(1);
+  // Unblock Bluetooth.
+  rfKill(0); 
 
   // Wait for the HCI interface to complete initialization or to come online.
   int hci = waitHciDev(hci_interface);
@@ -261,6 +264,15 @@ int NetBluetoothMgmt::openHci(int hci_interface) {
 
   ALOGI("hci interface %d ready", hci);
   bt_fd_ = fd;
+
+  // Settle delay and quick drain of the buffer to clear early UART noise.
+  usleep(100000);
+  int flags = fcntl(bt_fd_, F_GETFL, 0);
+  fcntl(bt_fd_, F_SETFL, flags | O_NONBLOCK);
+  unsigned char junk[1024];
+  while (read(bt_fd_, junk, sizeof(junk)) > 0) ;
+  fcntl(bt_fd_, F_SETFL, flags);
+
   return fd;
 }
 
@@ -269,10 +281,6 @@ void NetBluetoothMgmt::closeHci() {
     ::close(bt_fd_);
     bt_fd_ = -1;
   }
-
-  // Unblock Bluetooth.
-  rfKill(0);
-  free(rfkill_state_);
 }
 
 }  // namespace aidl::android::hardware::bluetooth::impl

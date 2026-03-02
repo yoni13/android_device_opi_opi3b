@@ -1,5 +1,11 @@
 # Bluetooth
 /dev/rfkill                                                                  0660   bluetooth  bluetooth
+/dev/ttyS1                                                                   0660   bluetooth  net_bt_admin
+/dev/ttyBT0                                                                  0660   bluetooth  net_bt_admin
+/sys/class/rfkill/rfkill*/state                                              0664   bluetooth  bluetooth
+/sys/class/rfkill/rfkill*/type                                               0444   bluetooth  bluetooth
+/proc/bluetooth/sleep/proto                                                  0660   bluetooth  net_bt_admin
+/proc/bluetooth/sleep/btwrite                                                0660   bluetooth  net_bt_admin
 
 # Camera
 /dev/media*                                                                  0660   system     camera
@@ -20,5 +26,9 @@
 
 # USB
 /sys/class/udc/1000480000.usb  current_speed                                 0664   system     system
+
+# UART console
+/dev/ttyS2                                                                  0660   shell      shell
+/dev/ttyFIQ0                                                                0660   shell      shell
 
 #ramdisk created

@@ -1,37 +1,107 @@
 import /vendor/etc/init/hw/init.opi3b.usb.rc
 
-
-
-
-
+on early-init
+    # Must exist before early aconfig code touches /metadata.
+    mkdir /metadata 0771 root system
+    mkdir /metadata/aconfig 0771 root system
+    mkdir /metadata/aconfig/maps 0771 root system
+    # Force memfd path for ashmem shim userspace.
+    setprop sys.use_memfd true
 
 on init
     symlink /sdcard /storage/sdcard0
-    
-
-
 
 on fs
+    mkdir /metadata 0771 root system
     mount_all /vendor/etc/fstab.opi3b
+    # Force metadata mount for early aconfig users when fs_mgr skips it.
+    mount ext4 /dev/block/mmcblk1p4 /metadata noatime nosuid nodev discard
+    mkdir /metadata/aconfig 0771 root system
+    mkdir /metadata/aconfig/maps 0771 root system
+    restorecon_recursive /metadata
 
 # created by me for wifi checking , going to use hidl therefore implemented this
 on post-fs-data
+    # Ensure package/user provisioning is available before system_server init.
+    start installd
+
+    # Keep overlay idmap cache traversal compatible with zygote expectations.
+    chown system system /data/resource-cache
+    chmod 0771 /data/resource-cache
+    exec - root root -- /system/bin/sh -c "rm -rf /data/resource-cache/*"
+    restorecon_recursive /data/resource-cache
+
     # Create the directories used by the Wireless subsystem
     mkdir /data/vendor/wifi 0770 wifi wifi
     mkdir /data/vendor/wifi/wpa 0770 wifi wifi
     mkdir /data/vendor/wifi/wpa/sockets 0770 wifi wifi
+    mkdir /vendor/etc/wifi/vendor_hals 0775 root system
+
+    # Load UWE5622 Bluetooth + Wi-Fi kernel modules
+    insmod /vendor/lib/modules/sprdbt_tty.ko
+    insmod /vendor/lib/modules/sprdwl_ng.ko
+
+    chmod 660 /dev/ttyS1
+    chown bluetooth net_bt_admin /dev/ttyS1
+    chmod 660 /dev/ttyBT0
+    chown bluetooth net_bt_admin /dev/ttyBT0
+    chmod 660 /dev/rfkill
+    chown bluetooth bluetooth /dev/rfkill
+    
+    # Ensure all rfkill nodes are accessible to bluetooth user
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill1/state
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill1/type
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill2/state
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill2/type
+    chmod 0664 /sys/class/rfkill/rfkill0/state
+    chmod 0664 /sys/class/rfkill/rfkill1/state
+    chmod 0664 /sys/class/rfkill/rfkill2/state
+
+    # Explicitly unblock all possible bluetooth rfkill switches
+    write /sys/class/rfkill/rfkill0/state 1
+    write /sys/class/rfkill/rfkill2/state 1
+
+    setprop wifi.interface wlan0
+    setprop wlan.driver.status ok
+    setprop vendor.wlan.driver.status ok
+    setprop vendor.common.wcn.driver.ready yes
+
+on property:vendor.common.wcn.driver.ready=yes
+    # Grant permissions to all rfkill nodes (including late ones)
+    exec - root root -- /system/bin/sh -c "sleep 2; chown -R bluetooth:bluetooth /sys/class/rfkill/rfkill*; chmod -R 664 /sys/class/rfkill/rfkill*/state"
+    write /sys/class/rfkill/rfkill0/state 1
+    write /sys/class/rfkill/rfkill2/state 1
+    start vendor.bt_init
+
+service vendor.bt_init /vendor/bin/hciattach_opi -n -s 1500000 /dev/ttyBT0 sprd
+    class main
+    user root
+    group bluetooth net_bt_admin system
+    capabilities NET_ADMIN
+    stdio_to_kmsg
+    oneshot
+    disabled
+
+on property:sys.boot_completed=1
+    exec - root root -- /system/bin/sh -c "if [ -d /sys/class/net/wlan0 ]; then setprop wlan.driver.status ok; fi"
+
     exec - root root -- /system/bin/sh -c "chmod +x /vendor/lib64/hw/vulkan.panfrost.so"
     exec - root root -- /system/bin/sh -c "chcon u:object_r:vendor_file:s0 /vendor/lib64/hw/vulkan.panfrost.so"
 
+# Keep an interactive root shell pinned to UART
+service serial_console /system/bin/sh
+    class core
+    user root
+    group root log readproc
+    seclabel u:r:su:s0
+    console ttyFIQ0
 
 
-
-    
-    
 #added by me just in case.
 service system_mode /system/bin/system_mode_daemon
     class core
     user root
     group root
     oneshot
-    

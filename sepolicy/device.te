@@ -1,1 +1,2 @@
 type cec_device, dev_type;
+type hci_tty_device, dev_type;
