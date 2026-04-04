@@ -79,7 +79,6 @@ PRODUCT_PACKAGES += \
     libbt-vendor-sprd \
     libbt-sprd_suite \
     libbt-vendor \
-    hciattach \
     hciattach_opi \
     hciconfig_opi \
     hcitool_opi
@@ -179,15 +178,24 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.ethernet.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.ethernet.xml
 
 #FFmpeg
+#PRODUCT_PACKAGES += \
+#    com.android.hardware.media.c2.ffmpeg
+
 PRODUCT_PACKAGES += \
-    com.android.hardware.media.c2.ffmpeg
+    android.hardware.media.c2@1.1-service \
+    android.hardware.media.c2@1.1-seccomp_policy \
+    libmpp \
+    libvpu \
+    librga
+
+
 
 # PRODUCT_PACKAGES += \
 #     android.hardware.media.c2@1.2-service-ffmpeg
 
-PRODUCT_COPY_FILES += \
-    $(DEVICE_PATH)/media/media_codecs_ffmpeg_c2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_ffmpeg_c2.xml \
-    $(DEVICE_PATH)/seccomp_policy/android.hardware.media.c2-ffmpeg.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/android.hardware.media.c2-ffmpeg.policy
+# PRODUCT_COPY_FILES += \
+#    $(DEVICE_PATH)/media/media_codecs_ffmpeg_c2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_ffmpeg_c2.xml
+#    $(DEVICE_PATH)/seccomp_policy/android.hardware.media.c2-ffmpeg.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/android.hardware.media.c2-ffmpeg.policy
 
 # Gatekeeper
 PRODUCT_PACKAGES += \

@@ -16,6 +16,10 @@ $(call inherit-product, device/google/atv/products/atv_base.mk)
 # Inherit some common Lineage stuff
 $(call inherit-product, vendor/lineage/config/common_full_tv.mk)
 
+# Inherit MindTheGapps TV
+# $(call inherit-product, vendor/gapps_tv/arm64/arm64-vendor.mk)
+# broken 
+
 # Inherit device configuration
 $(call inherit-product, device/opi/opi3b/device.mk)
 
@@ -32,7 +36,6 @@ PRODUCT_PACKAGES += \
     SettingsProviderTvOpiOverlay \
     WifiOpiOverlay
 
-# $(call inherit-product, vendor/gapps_tv/arm64/arm64-vendor.mk)
 # Device identifier. This must come after all inclusions.
 PRODUCT_DEVICE := opi3b
 PRODUCT_NAME := lineage_opi3b_tv

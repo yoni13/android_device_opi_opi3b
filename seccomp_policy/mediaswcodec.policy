@@ -1,3 +1,17 @@
 # device specific syscalls
 sched_getaffinity: 1
 sysinfo: 1
+eventfd2: 1
+epoll_create1: 1
+epoll_ctl: 1
+epoll_pwait: 1
+timerfd_create: 1
+timerfd_settime: 1
+getsockopt: 1
+setsockopt: 1
+socket: 1
+connect: 1
+sendmsg: 1
+recvmsg: 1
+getsockname: 1
+fcntl: 1
